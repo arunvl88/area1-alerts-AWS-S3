@@ -1,0 +1,8 @@
+name = "area1-alerts"
+type = "javascript"
+
+account_id = ""
+workers_dev = true
+route = ""
+zone_id = ""
+compatibility_date = "2022-12-29"
