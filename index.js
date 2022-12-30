@@ -1,13 +1,11 @@
 async function postToS3(output, alertId) {
   // Set AWS credentials and region
-  const ACCESS_KEY_ID = 'AKIA2SO5OU4DX7NOG2XX';
-  const SECRET_ACCESS_KEY = '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';
+  const ACCESS_KEY_ID = 'AWS_ACCESS_KEY_ID';
+  const SECRET_ACCESS_KEY = 'AWS_SECRET_ACCESS_KEY';
   const REGION = 'us-east-1';
 
   // Import the aws-sdk library
-  const response = await fetch('https://cdn.jsdelivr.net/npm/aws-sdk@2.778.0/dist/aws-sdk.min.js');
-  const importedCode = await response.text();
-  eval(importedCode);
+  await import('https://cdn.jsdelivr.net/npm/aws-sdk@2.778.0/dist/aws-sdk.min.js');
 
   // Create S3 client
   const s3 = new AWS.S3({
@@ -25,6 +23,7 @@ async function postToS3(output, alertId) {
   await s3.upload(params).promise();
 }
 
+
 async function parseAlerts(request) {
  // Parse the request body and extract event data
   const event = (await request.json());
@@ -34,8 +33,17 @@ async function parseAlerts(request) {
   const toArray = event.to;
 
   // Create an array of recipients in the format "display name" <email>
-  const recipientsArray = toArray.map((to, i) => `"${to}" <${envelopeToArray[i]}>`);
-  const alertReasons = event.alert_reasons.join('\n');
+  let recipientsArray = [];
+  if (event.envelope_to && event.to && event.envelope_to.length > 0 && event.to.length > 0) {
+    for (let i = 0; i < event.to.length; i++) {
+      let recipient = event.to[i];
+      if (event.envelope_to[i]) {
+        recipient = `"${event.to[i]}" <${event.envelope_to[i]}>`;
+      }
+      recipientsArray.push(recipient);
+    }
+  }
+  const alertReasons = event.alert_reasons ? event.alert_reasons.join('\n') : '';
   const envelopeFrom = event.envelope_from;
   const from = event.from;
   const fromName = event.from_name;
@@ -51,7 +59,7 @@ async function parseAlerts(request) {
   const output = `
 *Disposition:* ${finalDisposition}
 
-*Date:* ${ts.replace('T', ' ')}
+*Date:* ${ts && ts.replace ? ts.replace('T', ' ') : ''}
 *From:* ${sender}
 *To:* ${recipientsArray.join(', ')}
 *Subject:* ${subject}
@@ -74,11 +82,15 @@ ${alertReasons}
 //This is the Event Listener waiting for alerts to arrive from Area 1 
 
 addEventListener('fetch', (event) => {
-  const { request } = event;
-  if (request.method === 'POST') {
-    return event.respondWith(parseAlerts(request));
-  } else if (request.method === 'GET') {
-    // Return a blank page if you try to load the workers page directly and do nothing
-    return event.respondWith(new Response(''));
+  console.log(event);  // log the event object to the console
+  if (event && event.request && event.request.method) {
+    const { request } = event;
+    if (request.method === 'POST') {
+      return event.respondWith(parseAlerts(request));
+    } else if (request.method === 'GET') {
+      // Return a blank page if you try to load the workers page directly and do nothing
+      return event.respondWith(new Response(''));
+    }
   }
 });
+
