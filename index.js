@@ -10,19 +10,10 @@ async function postToS3(init, alertId) {
   const SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY;
   const REGION = 'us-east-1';
 
-  await import('https://cdn.jsdelivr.net/npm/aws-sdk@2.778.0/dist/aws-sdk.min.js')
+  const { S3Client } = require('@aws-sdk/client-s3');
 
-  /*
-  // Import the aws-sdk library
-  try {
-    await import('https://cdn.jsdelivr.net/npm/aws-sdk@2.778.0/dist/aws-sdk.min.js');
-    console.log('AWS SDK imported successfully');
-  } catch (error) {
-    console.error(error);
-  }  
-  */
   // Create S3 client
-  const s3 = new AWS.S3({
+  const s3 = new S3Client({
     accessKeyId: ACCESS_KEY_ID,
     secretAccessKey: SECRET_ACCESS_KEY,
     region: REGION
@@ -36,6 +27,7 @@ async function postToS3(init, alertId) {
   };
   await s3.upload(params).promise();
 }
+
 
 
 async function parseAlerts(request) {
