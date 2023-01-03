@@ -1,12 +1,26 @@
-async function postToS3(output, alertId) {
+/*This code is a Cloudflare Worker that listens for incoming HTTP POST requests. 
+When a request is received, it calls the parseAlerts function to parse the request body and extract certain pieces of data. 
+It then formats this data into a string and uploads it to an Amazon S3 bucket as a file named alert-${alertId}.txt, where alertId is the alert_id field in the event data.
+*/
+
+async function postToS3(init, alertId) {
   // Set AWS credentials and region
-  const ACCESS_KEY_ID = 'AWS_ACCESS_KEY_ID';
-  const SECRET_ACCESS_KEY = 'AWS_SECRET_ACCESS_KEY';
+  //console.log(init); 
+  const ACCESS_KEY_ID = AWS_ACCESS_KEY_ID;
+  const SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY;
   const REGION = 'us-east-1';
 
-  // Import the aws-sdk library
-  await import('https://cdn.jsdelivr.net/npm/aws-sdk@2.778.0/dist/aws-sdk.min.js');
+  await import('https://cdn.jsdelivr.net/npm/aws-sdk@2.778.0/dist/aws-sdk.min.js')
 
+  /*
+  // Import the aws-sdk library
+  try {
+    await import('https://cdn.jsdelivr.net/npm/aws-sdk@2.778.0/dist/aws-sdk.min.js');
+    console.log('AWS SDK imported successfully');
+  } catch (error) {
+    console.error(error);
+  }  
+  */
   // Create S3 client
   const s3 = new AWS.S3({
     accessKeyId: ACCESS_KEY_ID,
@@ -18,15 +32,19 @@ async function postToS3(output, alertId) {
   const params = {
     Bucket: 'area1alertsbucket',
     Key: `alert-${alertId}.txt`,
-    Body: output
+    Body: init
   };
   await s3.upload(params).promise();
 }
 
 
 async function parseAlerts(request) {
- // Parse the request body and extract event data
-  const event = (await request.json());
+  // Parse the request body and extract event data
+  const jsonBodyRequest = JSON.stringify(await request.json());
+  const jsonBody = JSON.parse(jsonBodyRequest);
+
+  const event = jsonBody.event;
+  //console.log(event);  // log the event object to the console
   const finalDisposition = event.final_disposition;
   const serverName = event.smtp_helo_server_name;
   const envelopeToArray = event.envelope_to;
@@ -57,22 +75,30 @@ async function parseAlerts(request) {
 
   // Format event data for output
   const output = `
-*Disposition:* ${finalDisposition}
+  Disposition:${finalDisposition}
+  Date:${ts && ts.replace ? ts.replace('T', ' ') : ''}
+  From:${sender}
+  To:${recipientsArray.join(', ')}
+  Subject:${subject}
+  Message-ID:${messageId}
+  Alert Reasons:${alertReasons}
+  Alert ID:${alertId}
+  `;
 
-*Date:* ${ts && ts.replace ? ts.replace('T', ' ') : ''}
-*From:* ${sender}
-*To:* ${recipientsArray.join(', ')}
-*Subject:* ${subject}
-*Message-ID:* ${messageId}
+  // Parse the output string and create a JSON object
+  const body = {
+    text: output
+  };
 
-*Alert Reasons:*
-${alertReasons}
-
-*Alert ID:* ${alertId}
-`;
+  const init = {
+    body: JSON.stringify(body),
+    headers: {
+      'content-type': 'application/json;charset=UTF-8'
+    }
+  };
 
   // Upload data to S3
-  await postToS3(output, alertId);
+  await postToS3(init, alertId);
 
   return new Response('');
 }
@@ -82,7 +108,7 @@ ${alertReasons}
 //This is the Event Listener waiting for alerts to arrive from Area 1 
 
 addEventListener('fetch', (event) => {
-  console.log(event);  // log the event object to the console
+  
   if (event && event.request && event.request.method) {
     const { request } = event;
     if (request.method === 'POST') {
