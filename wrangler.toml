@@ -7,3 +7,11 @@ route = ""
 zone_id = ""
 compatibility_date = "2022-12-29"
 
+[build.upload]
+format = "modules"
+dir = "./area1-alerts"
+main = "./index.js"
+
+[[build.upload.rules]]
+type = "ESModule"
+globs = ["**/*.js"]
