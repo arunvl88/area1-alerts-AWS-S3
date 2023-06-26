@@ -1,17 +1,9 @@
 name = "area1-alerts"
-type = "javascript"
-
-account_id = ""
 workers_dev = true
-route = ""
-zone_id = ""
 compatibility_date = "2022-12-29"
 
-[build.upload]
-format = "modules"
-dir = "./area1-alerts"
-main = "./index.js"
+main = "index.js"
 
-[[build.upload.rules]]
+[[rules]]
 type = "ESModule"
 globs = ["**/*.js"]

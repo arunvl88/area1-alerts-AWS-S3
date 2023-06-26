@@ -3,24 +3,34 @@ When a request is received, it calls the parseAlerts function to parse the reque
 It then formats this data into a string and uploads it to an Amazon S3 bucket as a file named alert-${alertId}.txt, where alertId is the alert_id field in the event data.
 */
 
-import * as aws4fetch from '/node_modules/aws4fetch';
+import { AwsClient } from 'aws4fetch';
 
 async function postToS3(init, alertId) {
   // Set AWS credentials and region
   const ACCESS_KEY_ID = AWS_ACCESS_KEY_ID;
   const SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY;
   const REGION = 'us-east-1';
-  
+
+  // Create a new instance of AwsClient
+  const clientConfig = {
+    accessKeyId: ACCESS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY,
+    region: REGION
+  };
+  const awsClient = new AwsClient(clientConfig);
+
   // Set up request options
+  const bucketName = 'area1alertsbucket';
+  const filePath = `alert-${alertId}.txt`;
   const requestOptions = {
     method: 'PUT',
-    host: 's3.amazonaws.com',
-    path: `/area1alertsbucket/alert-${alertId}.txt`,
+    host: `${bucketName}.s3.${REGION}.amazonaws.com`,
+    path: `/${filePath}`,
     body: init
   };
 
-  // Sign and make request using aws4fetch
-  await aws4fetch(ACCESS_KEY_ID, SECRET_ACCESS_KEY, requestOptions);
+  // Send request using AwsClient
+  const response = await awsClient.fetch(requestOptions);
 }
 
 async function parseAlerts(request) {
