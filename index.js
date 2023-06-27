@@ -22,15 +22,14 @@ async function postToS3(init, alertId) {
   // Set up request options
   const bucketName = 'area1alertsbucket';
   const filePath = `alert-${alertId}.txt`;
+  const url = `https://${bucketName}.s3.${REGION}.amazonaws.com/${filePath}`;
+  
   const requestOptions = {
     method: 'PUT',
-    host: `${bucketName}.s3.${REGION}.amazonaws.com`,
-    path: `/${filePath}`,
     body: init
   };
-
-  // Send request using AwsClient
-  const response = await awsClient.fetch(requestOptions);
+  // Send request using awsClient
+  const response = await awsClient.fetch(url, requestOptions);  
 }
 
 async function parseAlerts(request) {
